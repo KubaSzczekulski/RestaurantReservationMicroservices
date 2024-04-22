@@ -11,27 +11,27 @@ Each microservice—User, Restaurant, Reservation—maintains its own SQL databa
 For notification purposes, the application uses RabbitMQ to queue messages, which informs users about their reservation statuses via email, improving the reliability and efficiency of communications. Testing and validation of the application functionalities are conducted using Postman, ensuring the system meets all specified requirements.
 
 ## Team Members
-Olaf Teperek
-Jakub Szczękulski
+- Olaf Teperek
+- Jakub Szczękulski
 
 ## Tech Stack
 
 ### Backend:
 
-Java
-Spring
-Hibernate
-SQL Database
+- Java
+- Spring
+- Hibernate
+ - SQL Database
 
 ### Messaging and Notifications:
 
-RabbitMQ
+- RabbitMQ
 
 ### Security:
 
-Keycloak
-OAuth 2.0
+- Keycloak
+- OAuth 2.0
 
 ### Testing:
 
-Postman
+- Postman
