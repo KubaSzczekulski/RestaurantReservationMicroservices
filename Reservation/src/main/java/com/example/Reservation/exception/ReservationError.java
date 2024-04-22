@@ -11,7 +11,8 @@ public enum ReservationError {
     INVALID_RESERVATION_DETAILS("Invalid reservation details"),
     SEAT_UNAVAILABLE("Seat is unavailable"),
     USER_HAS_NOT_ALL_DATA_FILLED("User has not filled all data"),
-    TABLE_IS_RESERVED("Table is reserved");
+    TABLE_IS_RESERVED("Table is reserved"),
+    RESERVATION_NOT_ALLOWED("Reservation not allowed");
     private final String errorMessage;
 
     ReservationError(String errorMessage) {

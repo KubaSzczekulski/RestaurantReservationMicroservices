@@ -37,6 +37,7 @@ public class ReservationService {
 
 
     public boolean isTableAvailable(Long tableId, LocalDateTime reservationDateTime) {
+        // Sprawdzenie, czy stół istnieje
         Boolean tableExists = webClient.get()
                 .uri("/table/check/{tableId}", tableId)
                 .retrieve()
@@ -44,9 +45,13 @@ public class ReservationService {
                 .block();
 
         if (Boolean.TRUE.equals(tableExists)) {
+            // Określenie zakresu czasowego rezerwacji
+
             LocalDateTime startTime = reservationDateTime.minusHours(1);
             LocalDateTime endTime = reservationDateTime.plusHours(1);
+            // Pobranie nakładających się rezerwacji dla danego stołu i określonego zakresu czasowego
             List<Reservation> overlappingReservations = reservationRepository.findOverlappingReservations(tableId, startTime, endTime);
+            // Sprawdzenie, czy istnieją nakładające się rezerwacje
             return overlappingReservations.isEmpty();
         } else {
             return false;
@@ -54,6 +59,7 @@ public class ReservationService {
     }
 
     public boolean hasUserFilledAllData(String userId) {
+        // Sprawdzenie, czy użytkownik istnieje i czy wypełnił wszystkie dane
         Boolean userExists = webClient2.get()
                 .uri("/user/checkFields")
                 .header("userId", userId)
@@ -72,10 +78,14 @@ public class ReservationService {
     }
 
     @Transactional
-    public void deleteReservation(Long id) {
-        reservationRepository.findById(id).orElseThrow(
+    public void deleteReservation(Long id, String userId) {
+        Reservation reservation = reservationRepository.findById(id).orElseThrow(
                 () -> new ReservationException(ReservationError.RESERVATION_NOT_FOUND)
         );
+        //Sprawdzenie czy użytkwonik usuwa swoją rezerwację
+        if (!reservation.getUserId().equals(userId)) {
+            throw new ReservationException(ReservationError.RESERVATION_NOT_ALLOWED);
+        }
         reservationRepository.deleteById(id);
     }
 
@@ -83,12 +93,19 @@ public class ReservationService {
     public Reservation editReservation(Long id, Reservation reservation, String userId) {
         return reservationRepository.findById(id)
                 .map(reservationFromDb -> {
+                    //Sprawdzenie czy stolik jest wolny
                     if (!isTableAvailable(reservation.getTableId(), reservation.getReservationDateTime())) {
                         throw new ReservationException(ReservationError.TABLE_IS_RESERVED);
                     }
+                    //Sprawdzenie czy użytkwonik wypełnił wsyztskie obowiązkowe dane
                     if (!hasUserFilledAllData(userId)) {
                         throw new ReservationException(ReservationError.USER_HAS_NOT_ALL_DATA_FILLED);
                     }
+                    //Sprawdzenie czy użytkwonik usuwa swoją rezerwację
+                    if (!reservationFromDb.getUserId().equals(userId)) {
+                        throw new ReservationException(ReservationError.RESERVATION_NOT_ALLOWED);
+                    }
+                    //Aktualizacja pól
                     reservationFromDb.setReservationDateTime(reservation.getReservationDateTime());
                     reservationFromDb.setAdditionalInfo(reservation.getAdditionalInfo());
                     reservationFromDb.setTableId(reservation.getTableId());
@@ -102,26 +119,28 @@ public class ReservationService {
         System.out.println(reservationRepository.findById(reservationId));
         return reservationRepository.findById(reservationId)
                 .map(reservationFromDb -> {
+                    //Sprawdzenie czy stolik jest wolny
                     if (!isTableAvailable(reservation.getTableId(), reservation.getReservationDateTime())) {
                         throw new ReservationException(ReservationError.TABLE_IS_RESERVED);
                     }
-
+                    //Sprawdzenie czy użytkwonik usuwa swoją rezerwację
+                    if (!reservationFromDb.getUserId().equals(userId)) {
+                        throw new ReservationException(ReservationError.RESERVATION_NOT_ALLOWED);
+                    }
+                    //Sprawdzenie czy użytkwonik wypełnił wsyztskie obowiązkowe dane
                     if (!hasUserFilledAllData(userId)) {
                         throw new ReservationException(ReservationError.USER_HAS_NOT_ALL_DATA_FILLED);
                     }
-
+                    //Aktualizowanie pól
                     if (reservation.getReservationDateTime() != null) {
                         reservationFromDb.setReservationDateTime(reservation.getReservationDateTime());
                     }
-
                     if (reservation.getAdditionalInfo() != null) {
                         reservationFromDb.setAdditionalInfo(reservation.getAdditionalInfo());
                     }
-
                     if (reservation.getTableId() != null) {
                         reservationFromDb.setTableId(reservation.getTableId());
                     }
-
                     createAndConfirmReservation(reservationFromDb, userId);
 
                     return reservationRepository.save(reservationFromDb);
@@ -131,9 +150,11 @@ public class ReservationService {
     public Reservation addReservation(String userId, Reservation reservation) {
         reservation.setUserId(userId);
 
+        //Sprawdzenie czy stolik jest wolny
         if (!isTableAvailable(reservation.getTableId(), reservation.getReservationDateTime())) {
             throw new ReservationException(ReservationError.TABLE_IS_RESERVED);
         }
+        //Sprawdzenie czy użytkwonik wypełnił wsyztskie obowiązkowe dane
         if (!hasUserFilledAllData(userId)) {
             throw new ReservationException(ReservationError.USER_HAS_NOT_ALL_DATA_FILLED);
         }
